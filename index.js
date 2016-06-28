@@ -7,10 +7,8 @@ const request = require('request-promise')
 const argv = require('minimist')(process.argv.slice(2))
 
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0'
-
-console.info('argv:', argv)
-if (!argv.clientIdAdmin || !argv.clientSecretAdmin || !argv.redirectUri || !argv.logoutRedirectUri || !argv.clientId || !argv.login || !argv.password) {
-  console.log("Usage : node index.js --login='toto@toto.fr' --password='myPassword' --clientIdAdmin='myClientIdAdmin' --clientSecretAdmin='mySecretAdmin' --clientId='myClientIdToEdit' --redirectUri='https://myredirectUri' --logoutRedirectUri='https://mylogoutRedirectUri'")
+if (argv.usage || (!argv.clientIdAdmin || !argv.clientSecretAdmin || !argv.redirectUri || !argv.logoutRedirectUri || !argv.clientId || !argv.login || !argv.password || !argv.addUrl)) {
+  console.log("Usage : node index.js --login='toto@toto.fr' --password='myPassword' --clientIdAdmin='myClientIdAdmin' --clientSecretAdmin='mySecretAdmin' --clientId='myClientIdToEdit' --redirectUri='https://myredirectUri' --logoutRedirectUri='https://mylogoutRedirectUri' --addUrl='true' ('false' to remove)")
   process.exit(0)
 }
 
@@ -21,6 +19,7 @@ const LOGOUT_REDIRECT_URI = argv.logoutRedirectUri
 const CLIENT_ID_TO_EDIT = argv.clientId
 const LOGIN = argv.login
 const PASSWORD = argv.password
+const addUrl = argv.addUrl
 
 const client = new AnvilConnect({
   issuer: 'https://accounts.integ.clubmed.com',
@@ -88,8 +87,14 @@ client.initProvider()
     return clientData
   })
   .then((clientData) => {
-    clientData.redirect_uris.push(REDIRECT_URI)
-    clientData.post_logout_redirect_uris.push(LOGOUT_REDIRECT_URI)
+    if (addUrl === 'true') {
+      console.log('adding url')
+      clientData.redirect_uris.push(REDIRECT_URI)
+      clientData.post_logout_redirect_uris.push(LOGOUT_REDIRECT_URI)
+    } else {
+      clientData.redirect_uris = clientData.redirect_uris.filter((redirect_uri) => redirect_uri !== REDIRECT_URI)
+      clientData.post_logout_redirect_uris = clientData.post_logout_redirect_uris.filter((post_logout_redirect_uri) => post_logout_redirect_uri !== LOGOUT_REDIRECT_URI)
+    }
     client.clients.update(CLIENT_ID_TO_EDIT, clientData, { token: accessToken })
   })
   .then(() => client.clients.get(CLIENT_ID_TO_EDIT, { token: accessToken }))
